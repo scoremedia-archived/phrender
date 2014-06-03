@@ -1,0 +1,11 @@
+*.gem
+.bundle
+.config
+Gemfile.lock
+doc/
+pkg
+rdoc
+spec/reports
+test/tmp
+test/version_tmp
+tmp
