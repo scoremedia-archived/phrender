@@ -7,6 +7,7 @@ require 'multi_json'
 class Phrender::PhantomJSEngine
 
   def initialize(opts = {})
+    # Apply defaults
     opts = { :timeout => 10000, :ssl => false }.merge opts
 
     @poll_interval = 0.1

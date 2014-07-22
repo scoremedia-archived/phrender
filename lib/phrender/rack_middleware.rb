@@ -3,18 +3,18 @@ require 'phrender/rack_base'
 
 require 'rack'
 
-class Phrender::RackStatic < Phrender::RackBase
-  def initialize(root_directory, opts = {})
+class Phrender::RackMiddleware < Phrender::RackBase
+  def initialize(backend, opts = {})
     @phantom = Phrender::PhantomJSEngine.new(opts)
-    @root_directory = root_directory
+    @backend = backend
     super
   end
 
   def rack_app
-    static_directory = @root_directory
+    backend = @backend
     @app ||= Rack::Builder.new do
       use Proxy
-      run Rack::File.new(static_directory)
+      run backend
     end
   end
 
@@ -27,7 +27,12 @@ class Phrender::RackStatic < Phrender::RackBase
   protected
 
   def load_html(app)
-    File.read File.join(@root_directory, @index_file)
+    req = Rack::MockRequest.env_for('',
+      'PATH_INFO' => @index_file,
+      'REQUEST_METHOD' => 'GET'
+    )
+    status, headers, body = app.call(req)
+    body
   end
 
   def load_js(app)
@@ -35,7 +40,12 @@ class Phrender::RackStatic < Phrender::RackBase
       if path == :ember_driver
         Phrender::EMBER_DRIVER
       else
-        File.read File.join(@root_directory, path)
+        req = Rack::MockRequest.env_for('',
+          'PATH_INFO' => path,
+          'REQUEST_METHOD' => 'GET'
+        )
+        status, headers, body = app.call(req)
+        body
       end
     end.join(';')
     program = js_from_files + @raw_javascript
