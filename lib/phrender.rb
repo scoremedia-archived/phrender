@@ -7,6 +7,9 @@ require "phrender/static_middleware"
 require "rack"
 
 class Phrender
+  EMBER_DRIVER = File.read(
+    File.expand_path('../phrender/support/ember_driver.js', __FILE__))
+
   attr_reader :site
   attr_reader :engine
 

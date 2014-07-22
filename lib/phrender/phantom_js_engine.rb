@@ -7,6 +7,8 @@ require 'multi_json'
 class Phrender::PhantomJSEngine
 
   def initialize(opts = {})
+    opts = { :timeout => 10000, :ssl => false }.merge opts
+
     @poll_interval = 0.1
     @timeout = opts[:timeout] / 1000.0
     @ssl_protocol = opts.delete :ssl
