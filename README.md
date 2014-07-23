@@ -22,8 +22,8 @@ Then install PhantomJS:
 
 ## Usage
 
-*NOTE*: Ember users, there is a driver for ember. See the [Ember Driver](#Ember
-Driver) section.
+*NOTE*: Ember users, there is a driver for ember. See the [Ember Driver](#ember-driver)
+section.
 
 ### For completely static javascript sites:
 
