@@ -18,10 +18,10 @@ class Phrender::RackMiddleware < Phrender::RackBase
     end
   end
 
-  def render(path, app)
+  def render(request_uri, app)
     program = load_js(app)
     html = load_html(app)
-    @phantom.render(html, program)
+    @phantom.render(html, program, request_uri)
   end
 
   protected
@@ -32,7 +32,7 @@ class Phrender::RackMiddleware < Phrender::RackBase
       'REQUEST_METHOD' => 'GET'
     )
     status, headers, body = app.call(req)
-    body
+    body.to_s
   end
 
   def load_js(app)
@@ -49,7 +49,7 @@ class Phrender::RackMiddleware < Phrender::RackBase
       end
     end.join(';')
     program = js_from_files + @raw_javascript
-    program
+    program.to_s
   end
 
 end

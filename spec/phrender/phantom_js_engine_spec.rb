@@ -14,16 +14,6 @@ describe 'Phrender::PhantomJSEngine' do
     File.read(File.expand_path('../phantom_js_engine/app.js', __FILE__))
   }
 
-  it 'generates a startup command with escaped json' do
-    command = phantom.app_cmd(index, app, 'http://localhost')
-    expect(command).to match(
-      /phantomjs (.+?)phrender\/lib\/phrender\/support\/phantom_bridge.js/
-    )
-    expect(command).to include("--ignore-ssl-errors=true")
-    expect(command).to include("<html>")
-    expect(command).to include("use strict")
-  end
-
   it 'renders a simple page' do
     whitespace_regex = /(\n|^ +)/
     html = <<-HTML.strip_heredoc.gsub(whitespace_regex, '')

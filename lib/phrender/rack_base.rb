@@ -31,8 +31,8 @@ class Phrender::RackBase
 
   def call(env, app)
     status, headers, body = app.call(env)
-    if status == 404
-      body = render(env['PATH_INFO'], app)
+    if status == 404 || headers['PushState-Redirect']
+      body = render(env['REQUEST_URI'], app)
       [ 200, { 'Content-Type'  => 'text/html' }, body ]
     else
       [ status, headers, body ]

@@ -18,9 +18,12 @@ class Phrender::PhantomJSSession
   end
 
   def shutdown
-    @stdin.close
-    @stdout.close
-    @stderr.close
+    [ @stdin, @stdout, @stderr ].each do |pipe|
+      begin
+        pipe.close
+      rescue IOError
+      end
+    end
     begin
       Process.kill("TERM", @wait_thr.pid)
     rescue Errno::ESRCH

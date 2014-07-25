@@ -3,6 +3,7 @@ require 'phrender/phantom_js_session'
 
 require 'open3'
 require 'multi_json'
+require 'tempfile'
 
 class Phrender::PhantomJSEngine
 
@@ -28,8 +29,17 @@ class Phrender::PhantomJSEngine
   end
 
   def render(html, javascript, url = nil)
-    command = app_cmd(html, javascript, url)
-    session = Phrender::PhantomJSSession.new command, @timeout
+    javascript_file = make_temp_file(javascript, 'file.js')
+    html_file = make_temp_file(html, 'file.html')
+    program_options = { :html => html_file.path,
+                        :javascript => javascript_file.path,
+                        :url => url,
+                        :timeout => @timeout }
+
+    session = Phrender::PhantomJSSession.new @boot_cmd.join(' '), @timeout
+
+    session.stdin.puts MultiJson.dump(program_options)
+    session.stdin.close
 
     begin
       sleep @poll_interval
@@ -49,18 +59,18 @@ class Phrender::PhantomJSEngine
       @logger.critical "Phantom terminated without expiring or returning anything. This is bad."
       ''
     end
-  end
-
-  def app_cmd(html, javascript, url)
-    program_options = { :html => html,
-                        :javascript => javascript,
-                        :url => url,
-                        :timeout => @timeout }
-    encoded_options = MultiJson.dump(MultiJson.dump(program_options))
-    "%s %s" % [ @boot_cmd.join(' '), encoded_options ]
+    javascript_file.unlink
+    html_file.unlink
   end
 
   protected
+
+  def make_temp_file(data, name)
+    file = Tempfile.new(name)
+    file.write(data)
+    file.close
+    file
+  end
 
   def parse_output(session)
     output = session.stdout.gets
