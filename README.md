@@ -32,23 +32,33 @@ In your rackup file:
 ```ruby
 require 'phrender'
 
-# Available options are timeout, which gets passed on to PhantomJS. The asset
-# root should reflect where your app is stored, as well as all images, fonts,
-# css, and other assets.
-phrender = Phrender::RackStatic.new("asset_root", options)
+# The asset root should reflect where your app is stored, as well as all images,
+# fonts, css, and other static files.
+asset_root = "./"
 
 # The index file should link to no javascript on its own, or include any script
 # tags.
-phrender.index_file 'phrender.html'
+index_file = 'phrender.html'
 
 # This is the main application. It may or may not also start up the app.
-phrender.add_javascript_file '/assets/application.js'
+javascript_files = [ '/assets/application.js' ]
 
 # This is just raw javascript. Typically the app boot code.
-phrender.add_javascript "MyApp.boot()"
+javascript = [ "MyApp.boot()" ]
+
+# Javascript files and raw javascript get concatenated. Files first, then raw
+# code in array order. This code is then run against the index file using
+# PhantomJS
 
 # Rackup!
-run phrender.rack_app
+run Phrender::RackStatic.new({
+  :asset_root => asset_root,
+  :index_file => index_file,
+  :javascript_files => javascript_files,
+  :javascript => javascript
+})
+# Additionally, you map pass the option :timeout, which gets passed on to
+# PhantomJS.
 ```
 
 ### For partially dynamic javascript sites:
@@ -63,23 +73,27 @@ In your rackup file:
 require 'phrender'
 require 'my_rack_app'
 
-# This is what you provide
-app = MyRackApp.new
+# These options are the same as above, but instead of referencing actual files,
+# the paths are the request paths to send to the upstream application server.
+index_file = 'phrender.html'
+javascript_files = [ '/assets/application.js' ]
+javascript = [ "MyApp.boot()" ]
 
-# Available options are timeout and ssl, if, for some reason, your rack app is
+use Phrender::RackMiddleware, {
+  :index_file => index_file,
+  :javascript_files => javascript_files,
+  :javascript => javascript
+}
+# Additional options are timeout and ssl, if, for some reason, your rack app is
 # serving up SSL encrypted pages. Run `phantomjs --help` to see available
 # options, or use something falsey to disable. Both options are passed to
 # phantom.
-phrender = Phrender::RackMiddleware.new(app, options)
 
-# These options are the same as above, but instead of referencing actual files,
-# the paths are the request paths to send to the upstream application server.
-phrender.index_file 'phrender.html'
-phrender.add_javascript_file '/assets/application.js'
-phrender.add_javascript "MyApp.boot()"
+# Include other middlewarn
+use Rack::Static, :urls => "/assets", :root => "./assets"
 
 # Rackup!
-run phrender.rack_app
+run MyRackApp.new
 ```
 
 ## Signalling Render Completion

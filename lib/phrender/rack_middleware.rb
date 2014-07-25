@@ -1,41 +1,44 @@
 require 'phrender/phantom_js_engine'
-require 'phrender/rack_base'
 
 require 'rack'
 
-class Phrender::RackMiddleware < Phrender::RackBase
-  def initialize(backend, opts = {})
+class Phrender::RackMiddleware
+  def initialize(app, opts = {})
+    @app = app
+    @index_file = opts.delete(:index_file)
+    @javascript_paths = opts.delete(:javascript_files)
+    @raw_javascript = opts.delete(:javascript).join(';')
     @phantom = Phrender::PhantomJSEngine.new(opts)
-    @backend = backend
-    super
   end
 
-  def rack_app
-    backend = @backend
-    @app ||= Rack::Builder.new do
-      use Proxy
-      run backend
+  def call(env)
+    status, headers, body = @app.call(env)
+    if status == 404 || headers['Content-Type'] == 'text/html'
+      body = render(env['REQUEST_URI'])
+      [ 200, { 'Content-Type'  => 'text/html' }, [ body ] ]
+    else
+      [ status, headers, body ]
     end
-  end
-
-  def render(request_uri, app)
-    program = load_js(app)
-    html = load_html(app)
-    @phantom.render(html, program, request_uri)
   end
 
   protected
 
-  def load_html(app)
+  def render(request_uri)
+    program = load_js
+    html = load_html
+    @phantom.render(html, program, request_uri)
+  end
+
+  def load_html
     req = Rack::MockRequest.env_for('',
       'PATH_INFO' => @index_file,
       'REQUEST_METHOD' => 'GET'
     )
-    status, headers, body = app.call(req)
-    body.to_s
+    status, headers, body = @app.call(req)
+    parse_body body
   end
 
-  def load_js(app)
+  def load_js
     js_from_files = @javascript_paths.map do |path|
       if path == :ember_driver
         Phrender::EMBER_DRIVER
@@ -44,12 +47,22 @@ class Phrender::RackMiddleware < Phrender::RackBase
           'PATH_INFO' => path,
           'REQUEST_METHOD' => 'GET'
         )
-        status, headers, body = app.call(req)
-        body
+        status, headers, body = @app.call(req)
+        parse_body body
       end
     end.join(';')
     program = js_from_files + @raw_javascript
     program.to_s
+  end
+
+  def parse_body(body)
+    if body.respond_to? :each
+      data = ''
+      body.each{ |part| data << part }
+      data
+    else
+      body.to_s
+    end
   end
 
 end

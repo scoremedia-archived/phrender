@@ -4,11 +4,16 @@ require 'phrender/rack_static'
 describe 'Phrender::RackStatic' do
   let(:root) { File.expand_path '../rack_static', __FILE__ }
   let(:app) {
-    p = Phrender::RackStatic.new(root)
-    p.index_file = 'phrender.html'
-    p.add_javascript_file 'app.js'
-    p.add_javascript 'App.run'
-    p.rack_app
+    Phrender::RackStatic.new({
+      :asset_root => root,
+      :index_file => 'phrender.html',
+      :javascript_files => [
+        'app.js'
+      ],
+      :javascript => [
+        "App.run()"
+      ]
+    })
   }
 
   it 'runs the app contained in the referenced assets' do

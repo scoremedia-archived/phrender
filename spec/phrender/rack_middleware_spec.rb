@@ -10,11 +10,19 @@ describe 'Phrender::RackMiddleware' do
     b
   }
   let(:app) {
-    p = Phrender::RackMiddleware.new(backend)
-    p.index_file = 'phrender.html'
-    p.add_javascript_file 'app.js'
-    p.add_javascript 'App.run'
-    p.rack_app
+    _backend = backend # Needed because builder changes the block's context
+    Rack::Builder.new do
+      use Phrender::RackMiddleware, {
+        :index_file => 'phrender.html',
+        :javascript_files => [
+          'app.js'
+        ],
+        :javascript => [
+          "App.run()"
+        ]
+      }
+      run _backend
+    end
   }
 
   it 'runs the app contained in the referenced assets' do
