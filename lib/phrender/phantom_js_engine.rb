@@ -49,6 +49,10 @@ class Phrender::PhantomJSEngine
     # Clean up phantom
     session.shutdown
 
+    # Clean up temp files
+    javascript_file.unlink
+    html_file.unlink
+
     # Feed something out the chain
     if session.rendered
       session.page
@@ -59,8 +63,6 @@ class Phrender::PhantomJSEngine
       @logger.critical "Phantom terminated without expiring or returning anything. This is bad."
       ''
     end
-    javascript_file.unlink
-    html_file.unlink
   end
 
   protected
