@@ -5,17 +5,22 @@ require 'rack'
 class Phrender::RackMiddleware
   def initialize(app, opts = {})
     @app = app
-    @index_file = opts.delete(:index_file)
-    @javascript_paths = opts.delete(:javascript_files)
-    @raw_javascript = opts.delete(:javascript).join(';')
+    @index_file = opts[:index_file]
+    @javascript_paths = opts[:javascript_files]
+    @raw_javascript = opts[:javascript].join(';')
     @phantom = Phrender::PhantomJSEngine.new(opts)
   end
 
   def call(env)
     status, headers, body = @app.call(env)
-    if status == 404 || headers['Content-Type'] == 'text/html'
-      body = render(env['REQUEST_URI'])
-      [ 200, { 'Content-Type'  => 'text/html' }, [ body ] ]
+    if (status == 404 || headers['Content-Type'] == 'text/html')
+      if (env['HTTP_USER_AGENT'].match(/PhantomJS/))
+        [ 500, { 'Content-Type'  => 'text/html' }, [
+        'Server Error: HTML file contains recursive lookup' ] ]
+      else
+        body = render(env['REQUEST_URI'])
+        [ 200, { 'Content-Type'  => 'text/html' }, [ body ] ]
+      end
     else
       [ status, headers, body ]
     end
