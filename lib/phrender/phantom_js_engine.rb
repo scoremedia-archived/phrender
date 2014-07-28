@@ -34,7 +34,7 @@ class Phrender::PhantomJSEngine
     program_options = { :html => html_file.path,
                         :javascript => javascript_file.path,
                         :url => url,
-                        :timeout => @timeout }
+                        :timeout => @timeout * 1000.0 }
 
     session = Phrender::PhantomJSSession.new @boot_cmd.join(' '), @timeout
 
