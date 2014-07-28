@@ -12,13 +12,23 @@ class Phrender::RackMiddleware
   end
 
   def call(env)
-    status, headers, body = @app.call(env)
-    if (status == 404 || headers['Content-Type'] == 'text/html')
-      if (env['HTTP_USER_AGENT'].match(/PhantomJS/))
+    @req = Rack::Request.new(env)
+
+    # Check if the next middleware can handle the request
+    status, headers, body = @app.call(@req.env)
+
+    # If it can't, or if it's just the index file delivered via aliasing for
+    # pushstate, do phrender stuff.
+    if (status == 404 || headers['Push-State-Redirect'])
+      # If it's phantom making the request, then the phrender index file has
+      # a request that the upstream server can't resolve, so catch it, instead
+      # of recursively invoking the index
+      if (@req.user_agent.match(/PhantomJS/))
         [ 500, { 'Content-Type'  => 'text/html' }, [
         'Server Error: HTML file contains recursive lookup' ] ]
       else
-        body = render(env['REQUEST_URI'])
+        # Render the page
+        body = render(@req.url)
         [ 200, { 'Content-Type'  => 'text/html' }, [ body ] ]
       end
     else
@@ -35,11 +45,16 @@ class Phrender::RackMiddleware
   end
 
   def load_html
-    req = Rack::MockRequest.env_for('',
-      'PATH_INFO' => @index_file,
-      'REQUEST_METHOD' => 'GET'
-    )
-    status, headers, body = @app.call(req)
+    req = @req.dup
+    req.path_info = @index_file
+
+    # Attach a param to indicate that it's phrender requesting the page. This is
+    # only useful if the index file is delivered via a dynamic backend. Ignored
+    # otherwise.
+    req.update_param('phrender', true)
+    req.env['REQUEST_METHOD'] = 'GET'
+
+    status, headers, body = @app.call(req.env)
     parse_body body
   end
 
@@ -48,11 +63,11 @@ class Phrender::RackMiddleware
       if path == :ember_driver
         Phrender::EMBER_DRIVER
       else
-        req = Rack::MockRequest.env_for('',
-          'PATH_INFO' => path,
-          'REQUEST_METHOD' => 'GET'
-        )
-        status, headers, body = @app.call(req)
+        req = @req.dup
+        req.path_info = path
+        req.env['REQUEST_METHOD'] = 'GET'
+
+        status, headers, body = @app.call(req.env)
         parse_body body
       end
     end.join(';')
@@ -61,6 +76,9 @@ class Phrender::RackMiddleware
   end
 
   def parse_body(body)
+    # Rack responses must respond to each, which is generally a polyfil that
+    # yields the response, so reassemble it here, or just treat it like a
+    # string.
     if body.respond_to? :each
       data = ''
       body.each{ |part| data << part }
