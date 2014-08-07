@@ -14,16 +14,18 @@ class Phrender::RackMiddleware
   def call(env)
     @req = Rack::Request.new(env)
 
+    @req.update_param :phrender_request, 'true'
+
     # Check if the next middleware can handle the request
     status, headers, body = @app.call(@req.env)
 
     # If it can't, or if it's just the index file delivered via aliasing for
     # pushstate, do phrender stuff.
-    if (status == 404 || headers['Push-State-Redirect'])
+    if status == 404 || headers['Push-State-Redirect']
       # If it's phantom making the request, then the phrender index file has
       # a request that the upstream server can't resolve, so catch it, instead
       # of recursively invoking the index
-      if (@req.user_agent.match(/PhantomJS/))
+      if @req.user_agent && @req.user_agent.match(/PhantomJS/)
         [ 500, { 'Content-Type'  => 'text/html' }, [
         'Server Error: HTML file contains recursive lookup' ] ]
       else
