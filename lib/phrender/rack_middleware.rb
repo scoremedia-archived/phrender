@@ -14,8 +14,6 @@ class Phrender::RackMiddleware
   def call(env)
     @req = Rack::Request.new(env)
 
-    @req.update_param :phrender_request, 'true'
-
     # Check if the next middleware can handle the request
     status, headers, body = @app.call(@req.env)
 
