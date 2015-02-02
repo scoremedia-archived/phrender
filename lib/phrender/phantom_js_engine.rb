@@ -23,7 +23,8 @@ class Phrender::PhantomJSEngine
     @boot_cmd = [
       'phantomjs',
       phantom_program,
-      "--ignore-ssl-errors=true"
+      "--ignore-ssl-errors=true",
+      "--load-images=false"
     ]
     @boot_cmd.push "--ssl-protocol=%s" % [ @ssl_protocol ] if @ssl_protocol
   end
